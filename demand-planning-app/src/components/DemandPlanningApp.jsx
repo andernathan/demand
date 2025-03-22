@@ -352,8 +352,7 @@ const DemandPlanningApp = () => {
     width="100%"
     height="600"
     className="rounded border shadow-md"
-    src="https://analytics.zoho.com/open-view/2622839000003704237"
-    title="Zoho Analytics Dashboard"
+    src="https://analytics.zoho.com/open-view/2622839000003704237/b19525eb47e0ffd75799125012c385df"
   />
 </div>
 
