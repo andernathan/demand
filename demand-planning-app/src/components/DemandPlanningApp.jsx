@@ -1,4 +1,3 @@
-// DemandPlanningApp.jsx
 import React, { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { ChevronDown, ChevronRight } from "lucide-react";
@@ -12,8 +11,9 @@ import {
   Legend,
 } from "chart.js";
 import { Line } from "react-chartjs-2";
+import trendline from "chartjs-plugin-trendline";
 
-ChartJS.register(LineElement, CategoryScale, LinearScale, PointElement, Tooltip, Legend);
+ChartJS.register(LineElement, CategoryScale, LinearScale, PointElement, Tooltip, Legend, trendline);
 
 const products = ["Agriculture", "Mesh", "Nails", "Stucco", "Wire"];
 const productGroups = [
@@ -26,6 +26,7 @@ const productGroups = [
 const lastSalesMonths = ["Nov 2024", "Dec 2024", "Jan 2025", "Feb 2025"];
 const forecastMonths = ["Mar 2025", "Apr 2025", "May 2025", "Jun 2025"];
 const metrics = ["Backlog", "Forecast", "Absolute", "Final Forecast"];
+
 const columnColors = {
   Backlog: "bg-blue-50",
   Forecast: "bg-blue-100",
@@ -68,15 +69,15 @@ const DemandPlanningApp = () => {
       for (const month of forecastMonths) {
         const groups = {};
         const totals = {};
-        for (const metric of metrics) {
-          totals[metric] = 0;
-        }
+        for (const metric of metrics) totals[metric] = 0;
+
         for (const group of productGroups) {
           groups[group] = {};
           for (const metric of metrics) {
-            groups[group][metric] = ""; // blank input
+            groups[group][metric] = "";
           }
         }
+
         initialForecast[product][month] = { groups, totals };
       }
     }
@@ -106,50 +107,46 @@ const DemandPlanningApp = () => {
   };
 
   const loadSampleData = () => {
-    const updatedForecast = { ...forecastData };
-
+    const updated = { ...forecastData };
     for (const product of products) {
       for (const month of forecastMonths) {
-        let monthTotal = {};
-        for (const metric of metrics) {
-          monthTotal[metric] = 0;
-        }
-
+        const totals = {};
+        for (const metric of metrics) totals[metric] = 0;
         for (const group of productGroups) {
           for (const metric of metrics) {
-            const randomVal = getRandomForecast();
-            updatedForecast[product][month].groups[group][metric] = randomVal;
-            monthTotal[metric] += parseFloat(randomVal);
+            const val = getRandomForecast();
+            updated[product][month].groups[group][metric] = val;
+            totals[metric] += parseFloat(val);
           }
         }
-
         for (const metric of metrics) {
-          updatedForecast[product][month].totals[metric] = monthTotal[metric].toFixed(1);
+          updated[product][month].totals[metric] = totals[metric].toFixed(1);
         }
       }
     }
-
-    setForecastData(updatedForecast);
+    setForecastData(updated);
   };
 
   const generateChartData = () => {
     const allMonths = [...lastSalesMonths, ...forecastMonths];
-    const colorShades = ["#cfe2ff", "#9ec5fe", "#6ea8fe", "#3d8bfd", "#0d6efd"];
-
+    const colorPalette = ["#EF4444", "#10B981", "#F59E0B", "#6366F1", "#14B8A6"];
+  
     return {
       labels: allMonths,
       datasets: products.map((product, idx) => {
         const data = [];
-
+  
+        // Add static (Nov–Feb)
         for (const month of lastSalesMonths) {
           const groupData = groupSalesData[product]?.[month] || {};
           const total = productGroups.reduce((sum, group) => {
             const val = groupData[group];
             return sum + (isNaN(val) ? 0 : val);
           }, 0);
-          data.push(total.toFixed(1));
+          data.push(Number.isFinite(total) ? parseFloat(total.toFixed(1)) : null);
         }
-
+  
+        // Add forecast (Mar–Jun)
         for (const month of forecastMonths) {
           const groupData = forecastData[product]?.[month]?.groups || {};
           const forecastSum = productGroups.reduce((sum, group) => {
@@ -161,20 +158,26 @@ const DemandPlanningApp = () => {
                 }, 0)
               : 0);
           }, 0);
-          data.push(forecastSum.toFixed(1));
+          data.push(Number.isFinite(forecastSum) ? parseFloat(forecastSum.toFixed(1)) : null);
         }
-
+  
         return {
           label: product,
           data,
           fill: false,
           tension: 0.3,
-          borderColor: colorShades[idx % colorShades.length],
-          backgroundColor: colorShades[idx % colorShades.length],
+          borderColor: colorPalette[idx % colorPalette.length],
+          backgroundColor: colorPalette[idx % colorPalette.length],
+          trendlineLinear: {
+            style: colorPalette[idx % colorPalette.length],
+            lineStyle: "dotted",
+            width: 1,
+          },
         };
       }),
     };
   };
+  
 
   return (
     <div className="p-6 min-h-screen bg-gray-100">
@@ -220,7 +223,10 @@ const DemandPlanningApp = () => {
               ))}
               {forecastMonths.map(() =>
                 metrics.map((metric) => (
-                  <th key={metric + Math.random()} className={`px-1 py-1 border text-center ${columnColors[metric]}`}>
+                  <th
+                    key={metric + Math.random()}
+                    className={`px-1 py-1 border text-center ${columnColors[metric]}`}
+                  >
                     {metric}
                   </th>
                 ))
@@ -255,6 +261,7 @@ const DemandPlanningApp = () => {
                     ))
                   )}
                 </tr>
+                
 
                 <AnimatePresence>
                   {expandedProduct === product &&
@@ -338,6 +345,18 @@ const DemandPlanningApp = () => {
           }}
         />
       </div>
+      {/* Embedded Zoho Analytics Report */}
+<div className="mt-10 flex justify-center">
+  <iframe
+    frameBorder="0"
+    width="100%"
+    height="600"
+    className="rounded border shadow-md"
+    src="https://analytics.zoho.com/open-view/2622839000003704237"
+    title="Zoho Analytics Dashboard"
+  />
+</div>
+
     </div>
   );
 };
